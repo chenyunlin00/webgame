@@ -14,6 +14,8 @@ export const CraftingPage: React.FC = () => {
 
     // Check materials
     return recipe.materials.every(req => {
+      // FIX: Check inventory and equipment for materials? No, usually materials are in inventory.
+      // But we must ensure we are looking for the correct item ID.
       const item = playerState.inventory.find(i => i.id === req.itemId);
       return item && item.quantity >= req.quantity;
     });
@@ -92,6 +94,7 @@ export const CraftingPage: React.FC = () => {
                       'meat': '生肉',
                       'raw_meat': '生肉', // Add mapping for raw_meat
                       'plastic': '塑料',
+                      'electronic_parts': '电子元件',
                   };
                   const itemName = nameMap[req.itemId] || req.itemId;
 

@@ -12,6 +12,12 @@ export interface PlayerState {
   currentSeason: Season;
   currentTemperature: number;
   gameDay: number;
+  equipment: Equipment; // Added equipment slots
+}
+
+export interface Equipment {
+  weapon: InventoryItem | null;
+  armor: InventoryItem | null;
 }
 
 export interface InventoryItem {
@@ -50,6 +56,8 @@ export interface ItemProperties {
   warmth?: number;
   durability?: number;
   efficiency?: number;
+  attackPower?: number; // Added attack power
+  defensePower?: number; // Added defense power
 }
 
 // --- Crafting System Types ---
@@ -193,6 +201,8 @@ export interface GameSaveData {
   statistics: GameStatistics;
   eventLogs: GameEventLog[];
   isGameOver?: boolean; // Added isGameOver flag
+  gameWon?: boolean; // Added gameWon flag
+  victoryType?: 'sos' | 'deep_sea'; // Added victory type
 }
 
 export interface GameSettings {

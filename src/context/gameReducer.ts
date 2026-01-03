@@ -13,7 +13,11 @@ export type GameAction =
   | { type: 'UPDATE_STATS'; payload: { stat: 'health' | 'hunger' | 'comfort' | 'energy'; value: number } }
   | { type: 'LOG_EVENT'; payload: { message: string; type: 'info' | 'success' | 'warning' | 'danger' } }
   | { type: 'LOAD_GAME'; payload: GameSaveData }
-  | { type: 'RESET_GAME' };
+  | { type: 'RESET_GAME' }
+  | { type: 'EQUIP_ITEM'; payload: { itemId: string } }
+  | { type: 'UNEQUIP_ITEM'; payload: { slot: 'weapon' | 'armor' } }
+  | { type: 'WIN_GAME'; payload: { type: 'sos' | 'deep_sea' } }
+  | { type: 'FIX_BROKEN_ITEMS' };
 
 export const initialState: GameSaveData = {
   version: '1.0.0',
@@ -28,6 +32,7 @@ export const initialState: GameSaveData = {
     currentSeason: Season.SPRING,
     currentTemperature: 20,
     gameDay: 1,
+    equipment: { weapon: null, armor: null } // Initial equipment
   },
   shelterState: {
     level: 0,
@@ -105,6 +110,26 @@ export const gameReducer = (state: GameSaveData, action: GameAction): GameSaveDa
       else if (newHunger <= 20) newLogs.unshift(createLog('你感到非常饥饿！', 'warning', newDay));
       else if (newComfort <= 20) newLogs.unshift(createLog('你感到非常寒冷/不适！', 'warning', newDay));
 
+      // 6. Periodic Supply (Every 3 days)
+      let currentInventory = state.playerState.inventory;
+      const supplyDayInterval = 3;
+      
+      if (newDay % supplyDayInterval === 0) {
+          const supplyItem = { id: 'canned_food', name: '罐头', type: ItemType.FOOD, quantity: 2, properties: { hungerRestore: 30 } };
+          const existingIndex = currentInventory.findIndex(i => i.id === supplyItem.id);
+          
+          if (existingIndex >= 0) {
+              currentInventory = currentInventory.map((item, idx) => 
+                  idx === existingIndex ? { ...item, quantity: item.quantity + supplyItem.quantity } : item
+              );
+          } else {
+              currentInventory = [...currentInventory, supplyItem];
+          }
+          
+          // Add log
+          newLogs.unshift(createLog('幸运日！你发现了定期投放的空投补给：罐头 x2', 'success', newDay));
+      }
+
       return {
         ...state,
         isGameOver: isDead, // Update game over status
@@ -117,6 +142,7 @@ export const gameReducer = (state: GameSaveData, action: GameAction): GameSaveDa
           hunger: newHunger,
           comfort: newComfort,
           health: Math.max(0, newHealth),
+          inventory: currentInventory
         },
         eventLogs: newLogs.slice(0, 50), // Keep last 50
         statistics: {
@@ -170,9 +196,16 @@ export const gameReducer = (state: GameSaveData, action: GameAction): GameSaveDa
         let newInventory = [...state.playerState.inventory];
 
         if (existingItemIndex >= 0) {
-            newInventory[existingItemIndex].quantity += newItem.quantity;
+            // IMMUTABLE UPDATE: Create a new object for the updated item
+            const existingItem = newInventory[existingItemIndex];
+            newInventory[existingItemIndex] = {
+                ...existingItem,
+                ...newItem, // Overwrite with new definition (type, properties, name) to fix broken items
+                quantity: existingItem.quantity + newItem.quantity
+            };
         } else {
-            newInventory.push(newItem);
+            // CRITICAL: Clone newItem so we don't store a reference to the static data (which would cause mutation of game data)
+            newInventory.push({ ...newItem });
         }
 
         return {
@@ -253,6 +286,116 @@ export const gameReducer = (state: GameSaveData, action: GameAction): GameSaveDa
 
     case 'RESET_GAME': {
         return initialState;
+    }
+
+    case 'EQUIP_ITEM': {
+        const itemToEquip = state.playerState.inventory.find(i => i.id === action.payload.itemId);
+        if (!itemToEquip) return state;
+
+        const slot = itemToEquip.type === ItemType.TOOL ? 'weapon' : 
+                     (itemToEquip.type === ItemType.CLOTHING ? 'armor' : null);
+        
+        if (!slot) return state; // Can't equip this type
+
+        // 1. Remove from inventory (1 count)
+        const newInventory = state.playerState.inventory.map(i => 
+             i.id === itemToEquip.id ? { ...i, quantity: i.quantity - 1 } : i
+        ).filter(i => i.quantity > 0);
+
+        // 2. Handle existing equipped item
+        const currentlyEquipped = state.playerState.equipment[slot];
+        if (currentlyEquipped) {
+            // Add back to inventory
+            const existingIndex = newInventory.findIndex(i => i.id === currentlyEquipped.id);
+            if (existingIndex >= 0) {
+                newInventory[existingIndex].quantity += 1;
+            } else {
+                newInventory.push(currentlyEquipped);
+            }
+        }
+
+        return {
+            ...state,
+            playerState: {
+                ...state.playerState,
+                inventory: newInventory,
+                equipment: {
+                    ...state.playerState.equipment,
+                    [slot]: { ...itemToEquip, quantity: 1 } // Equipped item always q=1
+                }
+            },
+            eventLogs: [createLog(`装备了 ${itemToEquip.name}`, 'info', state.playerState.gameDay), ...state.eventLogs]
+        };
+    }
+
+    case 'UNEQUIP_ITEM': {
+        const slot = action.payload.slot;
+        const itemToUnequip = state.playerState.equipment[slot];
+        
+        if (!itemToUnequip) return state;
+
+        // Add back to inventory
+        const newInventory = [...state.playerState.inventory];
+        const existingIndex = newInventory.findIndex(i => i.id === itemToUnequip.id);
+        
+        if (existingIndex >= 0) {
+            newInventory[existingIndex].quantity += 1;
+        } else {
+            newInventory.push(itemToUnequip);
+        }
+
+        return {
+            ...state,
+            playerState: {
+                ...state.playerState,
+                inventory: newInventory,
+                equipment: {
+                    ...state.playerState.equipment,
+                    [slot]: null
+                }
+            },
+            eventLogs: [createLog(`卸下了 ${itemToUnequip.name}`, 'info', state.playerState.gameDay), ...state.eventLogs]
+        };
+    }
+
+    case 'WIN_GAME': {
+        return {
+            ...state,
+            gameWon: true,
+            victoryType: action.payload.type
+        };
+    }
+
+    case 'FIX_BROKEN_ITEMS': {
+        const newInventory = state.playerState.inventory.map(item => {
+            if (item.id === 'herbs') {
+                return { ...item, type: ItemType.MEDICINE, properties: { healthRestore: 15 } };
+            }
+            if (item.id === 'first_aid_kit') {
+                return { ...item, type: ItemType.MEDICINE, properties: { healthRestore: 50 } };
+            }
+            if (item.id === 'raw_meat' || item.id === 'yellow_croaker') {
+                return { ...item, type: ItemType.FOOD, properties: { hungerRestore: 15 } };
+            }
+            if (item.id === 'shark_meat') {
+                 return { ...item, type: ItemType.FOOD, properties: { hungerRestore: 100, comfortBonus: 50 } };
+            }
+            if (item.id === 'canned_food') {
+                return { ...item, type: ItemType.FOOD, properties: { hungerRestore: 30 } };
+            }
+            if (item.id === 'water' || item.id === 'water_bottle') {
+                return { ...item, type: ItemType.WATER, properties: { hungerRestore: 10, comfortBonus: 5 } };
+            }
+            return item;
+        });
+        
+        return {
+            ...state,
+            playerState: {
+                ...state.playerState,
+                inventory: newInventory
+            }
+        };
     }
 
     default:

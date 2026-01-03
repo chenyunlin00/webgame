@@ -8,6 +8,7 @@ import { InventoryPage } from './pages/InventoryPage';
 import { CraftingPage } from './pages/CraftingPage';
 import { ExplorePage } from './pages/ExplorePage';
 import { GameOverModal } from './components/game/GameOverModal';
+import { VictoryModal } from './components/game/VictoryModal';
 
 const App: React.FC = () => {
   return (
@@ -23,6 +24,7 @@ const App: React.FC = () => {
           </Routes>
         </Layout>
         <GameOverModal />
+        <VictoryModal />
       </Router>
     </GameProvider>
   );

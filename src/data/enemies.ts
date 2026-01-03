@@ -8,7 +8,8 @@ export const enemies: Record<string, Enemy> = {
     attack: 5,
     description: '一只饥饿的野狗，眼神凶狠。',
     loot: [
-      { itemId: 'raw_meat', probability: 0.8, quantity: 5 }
+      { itemId: 'raw_meat', probability: 0.7, quantity: 2 },
+      { itemId: 'cloth', probability: 0.4, quantity: 1 } // 破损的皮毛
     ]
   },
   'wolf': {
@@ -25,12 +26,12 @@ export const enemies: Record<string, Enemy> = {
   'bear': {
     id: 'bear',
     name: '变异熊',
-    maxHp: 200,
-    attack: 25,
+    maxHp: 150, // Reduced from 200
+    attack: 20, // Reduced from 25
     description: '体型巨大的熊，似乎受到过辐射影响。',
     loot: [
-      { itemId: 'raw_meat', probability: 1, quantity: 5 },
-      { itemId: 'cloth', probability: 0.8, quantity: 3 }
+      { itemId: 'raw_meat', probability: 1, quantity: 15 }, // Adjusted quantity to be more reasonable
+      { itemId: 'cloth', probability: 0.8, quantity: 5 } // Adjusted quantity
     ]
   },
   'rat_swarm': {
@@ -41,7 +42,7 @@ export const enemies: Record<string, Enemy> = {
     description: '成群结队的老鼠，非常烦人。',
     loot: [
       { itemId: 'raw_meat', probability: 0.8, quantity: 1 },
-      { itemId: 'cloth', probability: 0.3, quantity: 1 }, // 破布
+      { itemId: 'cloth', probability: 0.8, quantity: 5 }, // 破布
       { itemId: 'herbs', probability: 0.1, quantity: 1 }  // 偶尔携带草药
     ]
   },
@@ -55,6 +56,29 @@ export const enemies: Record<string, Enemy> = {
       { itemId: 'canned_food', probability: 0.5, quantity: 1 },
       { itemId: 'water_bottle', probability: 0.5, quantity: 1 },
       { itemId: 'scrap_metal', probability: 0.3, quantity: 2 }
+    ]
+  },
+  'mutant_rat': {
+    id: 'mutant_rat',
+    name: '变异巨鼠',
+    maxHp: 60,
+    attack: 10,
+    description: '体型硕大的变异老鼠，牙齿锋利，常在废墟中出没。',
+    loot: [
+      { itemId: 'raw_meat', probability: 0.6, quantity: 2 },
+      { itemId: 'cloth', probability: 0.2, quantity: 1 }
+    ]
+  },
+  'scavenger_drone': {
+    id: 'scavenger_drone',
+    name: '拾荒无人机',
+    maxHp: 80,
+    attack: 8,
+    description: '失控的自动无人机，会攻击靠近的生物。',
+    loot: [
+      { itemId: 'scrap_metal', probability: 0.8, quantity: 2 },
+      { itemId: 'plastic', probability: 0.5, quantity: 2 },
+      { itemId: 'electronic_parts', probability: 0.3, quantity: 1 } // Added electronic parts
     ]
   },
   'shark': {

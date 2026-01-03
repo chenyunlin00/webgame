@@ -3,8 +3,9 @@ import { useGame } from '../context/GameContext';
 import { explorationAreas } from '../data/explorationData';
 import { enemies } from '../data/enemies';
 import { ExplorationArea, EventType, Enemy } from '../types';
-import { Map, ArrowRight, Clock, Zap, Sword, Skull, Heart, Shield, Backpack, Lock } from 'lucide-react';
+import { Map, ArrowRight, Clock, Zap, Sword, Skull, Heart, Shield, Backpack, Lock, Volume2, VolumeX, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
+import { soundManager } from '../utils/SoundManager';
 
 export const ExplorePage: React.FC = () => {
   const { state, dispatch } = useGame();
@@ -15,7 +16,17 @@ export const ExplorePage: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [isExploring, setIsExploring] = useState(false);
   const [canLeave, setCanLeave] = useState(false);
+  const [isMuted, setIsMuted] = useState(soundManager.isAudioMuted());
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  const [foundSecretTunnel, setFoundSecretTunnel] = useState(false);
+
+  // Toggle Mute
+  const toggleMute = () => {
+    const newState = !isMuted;
+    setIsMuted(newState);
+    soundManager.setMute(newState);
+  };
 
   // Combat State
   const [combatState, setCombatState] = useState<{
@@ -75,6 +86,7 @@ export const ExplorePage: React.FC = () => {
     setIsExploring(true);
     setCanLeave(false);
     setCombatState(null);
+    setFoundSecretTunnel(false); // Reset secret tunnel state
 
     // Deduct Energy
     dispatch({ type: 'UPDATE_STATS', payload: { stat: 'energy', value: -area.energyCost } });
@@ -139,6 +151,10 @@ export const ExplorePage: React.FC = () => {
     addLog(`!!! 遭遇敌对生物: ${enemy.name} (HP: ${enemy.maxHp}) !!!`);
     addLog(enemy.description);
     
+    // Play Combat Music
+    // Using a reliable open source game music URL (Phaser 3 Examples)
+    soundManager.playBGM('https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/audio/oedipus_ark_pandora.mp3');
+
     let specialEffect: 'urchin_attached' | undefined = undefined;
     if (enemy.id === 'urchin') {
       specialEffect = 'urchin_attached';
@@ -168,6 +184,8 @@ export const ExplorePage: React.FC = () => {
       
       if (Math.random() < fleeChance) {
         addLog('你成功逃脱了！');
+        soundManager.playFleeSound();
+        soundManager.fadeOutBGM();
         setCombatState(null);
         setCanLeave(true);
       } else {
@@ -178,11 +196,15 @@ export const ExplorePage: React.FC = () => {
     }
 
     // Player Attack
-    // Damage calculation: Base 5 + Weapon Bonus (Simplified to random 5-15 for now)
-    const playerDamage = Math.floor(Math.random() * 10) + 5;
+    // Calculate Damage based on equipment
+    const weaponAttack = playerState.equipment.weapon?.properties?.attackPower || 0;
+    const baseAttack = 5;
+    const playerDamage = Math.floor(Math.random() * 10) + baseAttack + weaponAttack;
+
     const newEnemyHp = Math.max(0, combatState.currentEnemyHp - playerDamage);
     
-    addLog(`你攻击了 ${combatState.enemy.name}，造成了 ${playerDamage} 点伤害！`);
+    soundManager.playAttackSound();
+    addLog(`你攻击了 ${combatState.enemy.name}，造成了 ${playerDamage} 点伤害！${weaponAttack > 0 ? `(武器加成 +${weaponAttack})` : ''}`);
     
     // Urchin Detachment Logic
     if (combatState.enemy.id === 'urchin') {
@@ -215,16 +237,28 @@ export const ExplorePage: React.FC = () => {
        return;
     }
 
-    const enemyDamage = Math.floor(Math.random() * 5) + (enemy.attack - 2); // Variation
-    const actualDamage = Math.max(1, enemyDamage); // Minimum 1 damage
+    // Calculate Defense
+    const armorDefense = playerState.equipment.armor?.properties?.defensePower || 0;
 
-    addLog(`${enemy.name} 攻击了你，造成了 ${actualDamage} 点伤害！`);
+    const enemyDamage = Math.floor(Math.random() * 5) + (enemy.attack - 2); // Variation
+    // Apply Defense
+    const actualDamage = Math.max(1, enemyDamage - armorDefense); // Minimum 1 damage
+
+    soundManager.playHitSound();
+    
+    let logMsg = `${enemy.name} 攻击了你，造成了 ${actualDamage} 点伤害！`;
+    if (armorDefense > 0) {
+        logMsg += ` (护甲抵消了 ${Math.min(enemyDamage, armorDefense)} 点伤害)`;
+    }
+    addLog(logMsg);
     
     dispatch({ type: 'UPDATE_STATS', payload: { stat: 'health', value: -actualDamage } });
 
     // Check Player Death
     if (playerState.health - actualDamage <= 0) {
       addLog('你受了重伤，无法继续战斗...');
+      soundManager.playDefeatSound();
+      soundManager.fadeOutBGM(500);
       setCombatState(null);
       setCanLeave(true);
       return;
@@ -235,25 +269,49 @@ export const ExplorePage: React.FC = () => {
 
   const handleCombatVictory = (enemy: Enemy) => {
     addLog(`你击败了 ${enemy.name}！`);
+    soundManager.playVictorySound();
+    soundManager.fadeOutBGM();
+
+    // Deep Sea Victory Condition
+    if (enemy.id === 'shark') {
+        const chance = Math.random();
+        if (chance <= 0.5) { // 50% chance to find the tunnel
+            addLog('在巨齿鲨的巢穴深处，你发现了一个发出幽幽蓝光的洞穴入口...');
+            addLog('那似乎是传说中的海底隧道，可能通往安全的地方！');
+            setFoundSecretTunnel(true);
+        } else {
+            addLog('你在鲨鱼的领地搜寻了一番，除了一些残骸外一无所获。');
+        }
+    }
     
     // Loot generation
     if (enemy.loot) {
       enemy.loot.forEach(lootItem => {
         if (Math.random() <= lootItem.probability) {
-           const item = {
+           const item: any = {
              id: lootItem.itemId,
              name: getItemName(lootItem.itemId),
-             type: 'material', // Default
+             type: 'material', // Default fallback
              quantity: lootItem.quantity
            };
            
-           // Special properties for Shark items
-           if (item.id === 'shark_meat') {
+           // Special properties for known items
+           // FIX: Correctly assign type and properties for specific items
+           if (item.id === 'shark_meat' || item.id === 'raw_meat' || item.id === 'yellow_croaker' || item.id === 'canned_food' || item.id === 'urchin_meat') {
              item.type = 'food';
-             // @ts-ignore
-             item.properties = { hungerRestore: 100, comfortBonus: 50 };
-           }
-           if (item.id === 'shark_skin') {
+             if (item.id === 'shark_meat') item.properties = { hungerRestore: 100, comfortBonus: 50 };
+             if (item.id === 'raw_meat') item.properties = { hungerRestore: 15 };
+             if (item.id === 'yellow_croaker') item.properties = { hungerRestore: 15 };
+             if (item.id === 'canned_food') item.properties = { hungerRestore: 30 };
+             if (item.id === 'urchin_meat') item.properties = { hungerRestore: 20 };
+           } else if (item.id === 'water' || item.id === 'water_bottle') {
+             item.type = 'water';
+             item.properties = { hungerRestore: 10, comfortBonus: 5 };
+           } else if (item.id === 'herbs' || item.id === 'first_aid_kit') {
+             item.type = 'medicine';
+             if (item.id === 'herbs') item.properties = { healthRestore: 15 };
+             if (item.id === 'first_aid_kit') item.properties = { healthRestore: 50 };
+           } else if (item.id === 'shark_skin' || item.id === 'cloth' || item.id === 'leather') {
                item.type = 'material';
            }
 
@@ -272,6 +330,17 @@ export const ExplorePage: React.FC = () => {
     setIsExploring(false);
     setLogs([]);
     setCanLeave(false);
+    setFoundSecretTunnel(false);
+  };
+
+  const handleEnterTunnel = () => {
+      dispatch({ type: 'WIN_GAME', payload: { type: 'deep_sea' } });
+  };
+
+  const handleReExplore = () => {
+    if (exploringArea) {
+        handleStartExplore(exploringArea);
+    }
   };
 
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -297,7 +366,8 @@ export const ExplorePage: React.FC = () => {
       'urchin_meat': '海胆肉',
       'jellyfish_tentacle': '水母触须',
       'octopus_leg': '章鱼足',
-      'first_aid_kit': '急救包'
+      'first_aid_kit': '急救包',
+      'electronic_parts': '电子元件'
     };
     return map[id] || id;
   };
@@ -309,14 +379,47 @@ export const ExplorePage: React.FC = () => {
     return (
       <div className="h-full flex flex-col">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-white">正在探索: {exploringArea.name}</h1>
-          {canLeave && (
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold text-white">正在探索: {exploringArea.name}</h1>
             <button 
-              onClick={handleLeave}
-              className="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white transition-colors"
+              onClick={toggleMute}
+              className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              title={isMuted ? "开启音效" : "静音"}
             >
-              返回基地
+              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
+          </div>
+          {canLeave && (
+            <div className="flex gap-3">
+                {foundSecretTunnel && (
+                    <button 
+                    onClick={handleEnterTunnel}
+                    className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-white transition-colors animate-pulse shadow-lg shadow-cyan-500/50 font-bold"
+                    >
+                    进入深海隧道 (胜利)
+                    </button>
+                )}
+                <button 
+                onClick={handleReExplore}
+                disabled={playerState.energy < (exploringArea?.energyCost || 0)}
+                className={clsx(
+                    "px-4 py-2 rounded-lg text-white transition-colors flex items-center",
+                    playerState.energy >= (exploringArea?.energyCost || 0) 
+                        ? "bg-orange-600 hover:bg-orange-500" 
+                        : "bg-slate-700 text-slate-500 cursor-not-allowed"
+                )}
+                title="再次探索该区域"
+                >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                再次探索
+                </button>
+                <button 
+                onClick={handleLeave}
+                className="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white transition-colors"
+                >
+                返回基地
+                </button>
+            </div>
           )}
         </div>
 

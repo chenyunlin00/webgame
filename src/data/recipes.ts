@@ -13,8 +13,8 @@ export const recipes: CraftingRecipe[] = [
   {
     id: 'simple_clothing',
     name: '简易外套',
-    description: '用破布和纤维缝制的外套，提供基础保暖。',
-    result: { id: 'simple_clothing', name: '简易外套', type: ItemType.CLOTHING, quantity: 1, properties: { warmth: 10 } },
+    description: '用破布和纤维缝制的外套，提供基础保暖和防护。',
+    result: { id: 'simple_clothing', name: '简易外套', type: ItemType.CLOTHING, quantity: 1, properties: { warmth: 10, defensePower: 5 } }, // Added Defense
     materials: [{ itemId: 'cloth', quantity: 3 }, { itemId: 'fiber', quantity: 2 }], // Assuming we have these items
     craftingTime: 60,
     shelterLevelRequired: 0
@@ -23,7 +23,7 @@ export const recipes: CraftingRecipe[] = [
     id: 'stone_axe',
     name: '石斧',
     description: '基础工具，也许能用来防身。',
-    result: { id: 'stone_axe', name: '石斧', type: ItemType.TOOL, quantity: 1 },
+    result: { id: 'stone_axe', name: '石斧', type: ItemType.TOOL, quantity: 1, properties: { attackPower: 8 } }, // Added Attack
     materials: [{ itemId: 'wood', quantity: 2 }, { itemId: 'stone', quantity: 2 }],
     craftingTime: 45,
     shelterLevelRequired: 0
@@ -41,9 +41,18 @@ export const recipes: CraftingRecipe[] = [
     id: 'diving_suit',
     name: '潜水服',
     description: '使用特殊材料制作的潜水装备，可以进入海底探索。',
-    result: { id: 'diving_suit', name: '潜水服', type: ItemType.CLOTHING, quantity: 1, properties: { warmth: 5, durability: 100 } },
+    result: { id: 'diving_suit', name: '潜水服', type: ItemType.CLOTHING, quantity: 1, properties: { warmth: 5, durability: 100, defensePower: 8 } }, // Added Defense
     materials: [{ itemId: 'cloth', quantity: 5 }, { itemId: 'metal', quantity: 3 }, { itemId: 'plastic', quantity: 2 }], // Need to ensure plastic/metal exists or use existing
     craftingTime: 180,
     shelterLevelRequired: 1
+  },
+  {
+    id: 'sos_transmitter',
+    name: '求救信号发射器',
+    description: '利用捡来的电子元件和金属拼凑的发射器，也许能联系到外界救援。使用它即可获得胜利！',
+    result: { id: 'sos_transmitter', name: '求救信号发射器', type: ItemType.MACHINE, quantity: 1 },
+    materials: [{ itemId: 'metal', quantity: 10 }, { itemId: 'plastic', quantity: 5 }, { itemId: 'electronic_parts', quantity: 3 }],
+    craftingTime: 300,
+    shelterLevelRequired: 2
   }
 ];

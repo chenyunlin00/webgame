@@ -14,13 +14,13 @@ export const explorationAreas: ExplorationArea[] = [
       {
         id: 'find_canned_food',
         type: EventType.POSITIVE,
-        probability: 0.3,
+        probability: 0.5, // Increased from 0.3
         description: '你在废弃的房屋里发现了一些罐头。',
         outcomes: [{
           type: 'item',
-          value: { id: 'canned_food', name: '罐头', type: ItemType.FOOD, quantity: 2, properties: { hungerRestore: 30 } },
+          value: { id: 'canned_food', name: '罐头', type: ItemType.FOOD, quantity: 3, properties: { hungerRestore: 30 } }, // Increased quantity from 2 to 3
           probability: 1,
-          message: '获得了 罐头 x2'
+          message: '获得了 罐头 x3'
         }]
       },
       {
@@ -46,7 +46,7 @@ export const explorationAreas: ExplorationArea[] = [
       {
         id: 'find_herbs',
         type: EventType.POSITIVE,
-        probability: 0.25,
+        probability: 0.2, // Slightly reduced to accommodate weapon
         description: '你在废墟的缝隙中发现了一些可用的草药。',
         outcomes: [{
           type: 'item',
@@ -54,6 +54,32 @@ export const explorationAreas: ExplorationArea[] = [
           probability: 1,
           message: '获得了 草药 x2'
         }]
+      },
+      {
+        id: 'find_rusty_pipe',
+        type: EventType.POSITIVE,
+        probability: 0.1, // Increased chance
+        description: '你在瓦砾堆中发现了一些可以作为武器的工具。',
+        outcomes: [
+          {
+            type: 'item',
+            value: { id: 'wooden_club', name: '木棒', type: ItemType.TOOL, quantity: 1, properties: { attackPower: 4 } },
+            probability: 0.5,
+            message: '获得了 木棒 x1'
+          },
+          {
+            type: 'item',
+            value: { id: 'shovel', name: '铁铲', type: ItemType.TOOL, quantity: 1, properties: { attackPower: 7 } },
+            probability: 0.3,
+            message: '获得了 铁铲 x1'
+          },
+          {
+            type: 'item',
+            value: { id: 'rusty_pipe', name: '锈铁管', type: ItemType.TOOL, quantity: 1, properties: { attackPower: 6 } },
+            probability: 0.2,
+            message: '获得了 锈铁管 x1'
+          }
+        ]
       },
       {
         id: 'nothing_found',
@@ -87,6 +113,18 @@ export const explorationAreas: ExplorationArea[] = [
         }]
       },
       {
+        id: 'find_tactical_vest',
+        type: EventType.POSITIVE,
+        probability: 0.08, // 8% chance
+        description: '你在保安室的储物柜里发现了一件防刺背心。',
+        outcomes: [{
+          type: 'item',
+          value: { id: 'tactical_vest', name: '防刺背心', type: ItemType.CLOTHING, quantity: 1, properties: { defensePower: 15, warmth: 5 } },
+          probability: 1,
+          message: '获得了 防刺背心 x1'
+        }]
+      },
+      {
         id: 'wild_dog_attack',
         type: EventType.NEGATIVE,
         probability: 0.3,
@@ -116,6 +154,18 @@ export const explorationAreas: ExplorationArea[] = [
           value: { stat: 'health', value: 20 },
           probability: 1,
           message: '使用了急救箱，恢复了 20点 生命值'
+        }]
+      },
+      {
+        id: 'find_gun',
+        type: EventType.POSITIVE,
+        probability: 0.05, // 5% chance, rare find
+        description: '在一个隐蔽的保险箱里，你发现了一把还能使用的手枪！',
+        outcomes: [{
+          type: 'item',
+          value: { id: 'pistol', name: '手枪', type: ItemType.TOOL, quantity: 1, properties: { attackPower: 25 } },
+          probability: 1,
+          message: '获得了 手枪 x1'
         }]
       },
       {
@@ -165,7 +215,7 @@ export const explorationAreas: ExplorationArea[] = [
       {
         id: 'find_stone',
         type: EventType.POSITIVE,
-        probability: 0.2,
+        probability: 0.4, // Increased probability from 0.2
         description: '你收集了一些建筑用的石材。',
         outcomes: [{
           type: 'item',
@@ -175,11 +225,39 @@ export const explorationAreas: ExplorationArea[] = [
         }]
       },
       {
+        id: 'find_helmet',
+        type: EventType.POSITIVE,
+        probability: 0.1, // 10% chance
+        description: '你在更衣室里找到了一顶建筑安全帽。',
+        outcomes: [{
+          type: 'item',
+          value: { id: 'hard_hat', name: '安全帽', type: ItemType.CLOTHING, quantity: 1, properties: { defensePower: 5, warmth: 2 } },
+          probability: 1,
+          message: '获得了 安全帽 x1'
+        }]
+      },
+      {
         id: 'encounter_bear',
         type: EventType.NEGATIVE,
-        probability: 0.3,
+        probability: 0.1, // Reduced from 0.3, now it's a rare boss
         description: '一只巨大的变异熊挡住了你的去路！',
         enemyId: 'bear',
+        outcomes: []
+      },
+      {
+        id: 'encounter_mutant_rat',
+        type: EventType.NEGATIVE,
+        probability: 0.2,
+        description: '一群巨大的变异老鼠从阴影中窜出！',
+        enemyId: 'mutant_rat',
+        outcomes: []
+      },
+      {
+        id: 'encounter_scavenger_drone',
+        type: EventType.NEGATIVE,
+        probability: 0.2,
+        description: '一台失控的拾荒无人机锁定了你！',
+        enemyId: 'scavenger_drone',
         outcomes: []
       },
       {
@@ -221,13 +299,13 @@ export const explorationAreas: ExplorationArea[] = [
       {
         id: 'find_yellow_croaker',
         type: EventType.POSITIVE,
-        probability: 0.25,
+        probability: 0.4, // Increased from 0.25
         description: '一群小黄鱼从你身边游过。',
         outcomes: [{
           type: 'item',
-          value: { id: 'yellow_croaker', name: '小黄鱼', type: ItemType.FOOD, quantity: 3, properties: { hungerRestore: 15 } },
+          value: { id: 'yellow_croaker', name: '小黄鱼', type: ItemType.FOOD, quantity: 4, properties: { hungerRestore: 15 } }, // Increased quantity from 3 to 4
           probability: 1,
-          message: '获得了 小黄鱼 x3'
+          message: '获得了 小黄鱼 x4'
         }]
       },
       {
